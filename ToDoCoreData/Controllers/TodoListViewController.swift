@@ -13,8 +13,12 @@ class TodoListViewController: UITableViewController {
 
     let defaults = UserDefaults.standard
 
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appending(component: "Items.plist")
+
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        print(dataFilePath)
 
         let newItem = Item(title: "Find Mike", done: false)
         itemArray.append(newItem)
@@ -25,16 +29,19 @@ class TodoListViewController: UITableViewController {
         let newItem2 = Item(title: "Find Tommy", done: false)
         itemArray.append(newItem2)
 
-//        if let items = defaults.array(forKey: "TodoListArray2") as? [Item] {
-//            itemArray = items
-//        }
+        self.loadItems()
 
-        // Retrieve from UserDefaults
-        if let data = defaults.object(forKey: "TodoListArray2") as? Data,
-           let items = try? JSONDecoder().decode([Item].self, from: data) {
-            itemArray = items
+    }
+
+    func loadItems() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                self.itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+
+            }
         }
-
     }
 }
 
@@ -45,8 +52,6 @@ extension TodoListViewController {
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-
-        print("CellForRowAtIndexPath Called")
 
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
 
@@ -64,7 +69,8 @@ extension TodoListViewController {
 
         itemArray[indexPath.row].done.toggle()
 
-//        tableView.reloadData()
+        self.saveItems()
+        
         tableView.reloadRows(at: [indexPath], with: .automatic)
         tableView.deselectRow(at: indexPath, animated: true)
     }
@@ -84,10 +90,9 @@ extension TodoListViewController {
             newItem.title = text
             self.itemArray.append(newItem)
 
-            // To store in UserDefaults
-            if let encodedItem = try? JSONEncoder().encode(self.itemArray) {
-                self.defaults.set(encodedItem, forKey: "TodoListArray2")
-            }
+
+
+            self.saveItems()
 
             self.tableView.reloadData()
         }
@@ -103,4 +108,14 @@ extension TodoListViewController {
         present(alert, animated: true)
     }
 
+    func saveItems() {
+        let encoder = PropertyListEncoder()
+
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print(error)
+        }
+    }
 }
